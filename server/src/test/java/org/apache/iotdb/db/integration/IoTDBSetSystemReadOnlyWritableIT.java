@@ -73,16 +73,16 @@ public class IoTDBSetSystemReadOnlyWritableIT {
         "insert into root.ln.wf01.wt01(timestamp,temperature) values(1509466080000,22.57987)",
         "insert into root.ln.wf01.wt01(timestamp,temperature) values(1509466140000,20.98177)",
         "create timeseries root.ln.wf02.wt02.hardware with datatype=TEXT,encoding=PLAIN",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465600000,\"v2\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465660000,\"v2\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465720000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465780000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465840000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465900000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465960000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466020000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466080000,\"v1\")",
-        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466140000,\"v1\")",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465600000,'v2')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465660000,'v2')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465720000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465780000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465840000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465900000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509465960000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466020000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466080000,'v1')",
+        "insert into root.ln.wf02.wt02(timestamp,hardware) values(1509466140000,'v1')",
         "create timeseries root.ln.wf02.wt02.status with datatype=BOOLEAN,encoding=PLAIN",
         "insert into root.ln.wf02.wt02(timestamp,status) values(1509465600000,true)",
         "insert into root.ln.wf02.wt02(timestamp,status) values(1509465660000,true)",
@@ -202,7 +202,7 @@ public class IoTDBSetSystemReadOnlyWritableIT {
             DriverManager.getConnection(
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
-      boolean hasResultSet = statement.execute("select * from root where time>10");
+      boolean hasResultSet = statement.execute("select * from root.** where time>10");
       Assert.assertTrue(hasResultSet);
 
       try (ResultSet resultSet = statement.getResultSet()) {

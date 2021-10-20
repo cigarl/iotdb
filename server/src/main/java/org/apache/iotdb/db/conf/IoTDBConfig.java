@@ -125,6 +125,9 @@ public class IoTDBConfig {
   /** Ratio of memory allocated for buffered arrays */
   private double bufferedArraysMemoryProportion = 0.6;
 
+  /** Memory allocated proportion for timeIndex */
+  private double timeIndexMemoryProportion = 0.2;
+
   /** Flush proportion for system */
   private double flushProportion = 0.4;
 
@@ -457,9 +460,6 @@ public class IoTDBConfig {
   /** Is stat performance of sub-module enable. */
   private boolean enablePerformanceStat = false;
 
-  /** Is performance tracing enable. */
-  private boolean enablePerformanceTracing = false;
-
   /** The display of stat performance interval in ms. Unit: millisecond */
   private long performanceStatDisplayInterval = 60000;
 
@@ -531,6 +531,9 @@ public class IoTDBConfig {
 
   /** How many threads will be set up to perform upgrade tasks. */
   private int upgradeThreadNum = 1;
+
+  /** How many threads will be set up to perform settle tasks. */
+  private int settleThreadNum = 1;
 
   /** How many threads will be set up to perform main merge tasks. */
   private int mergeThreadNum = 1;
@@ -695,6 +698,9 @@ public class IoTDBConfig {
 
   // max size for tag and attribute of one time series
   private int tagAttributeTotalSize = 700;
+
+  // Interval num of tag and attribute records when force flushing to disk
+  private int tagAttributeFlushInterval = 1000;
 
   // In one insert (one device, one timestamp, multiple measurements),
   // if enable partial insert, one measurement failure will not impact other measurements
@@ -1379,6 +1385,14 @@ public class IoTDBConfig {
     this.bufferedArraysMemoryProportion = bufferedArraysMemoryProportion;
   }
 
+  public double getTimeIndexMemoryProportion() {
+    return timeIndexMemoryProportion;
+  }
+
+  public void setTimeIndexMemoryProportion(double timeIndexMemoryProportion) {
+    this.timeIndexMemoryProportion = timeIndexMemoryProportion;
+  }
+
   public double getFlushProportion() {
     return flushProportion;
   }
@@ -1419,7 +1433,7 @@ public class IoTDBConfig {
     this.allocateMemoryForSchema = allocateMemoryForSchema;
   }
 
-  long getAllocateMemoryForRead() {
+  public long getAllocateMemoryForRead() {
     return allocateMemoryForRead;
   }
 
@@ -1457,14 +1471,6 @@ public class IoTDBConfig {
 
   public void setEnablePerformanceStat(boolean enablePerformanceStat) {
     this.enablePerformanceStat = enablePerformanceStat;
-  }
-
-  public boolean isEnablePerformanceTracing() {
-    return enablePerformanceTracing;
-  }
-
-  public void setEnablePerformanceTracing(boolean enablePerformanceTracing) {
-    this.enablePerformanceTracing = enablePerformanceTracing;
   }
 
   public long getPerformanceStatDisplayInterval() {
@@ -2041,6 +2047,10 @@ public class IoTDBConfig {
     return upgradeThreadNum;
   }
 
+  public int getSettleThreadNum() {
+    return settleThreadNum;
+  }
+
   void setUpgradeThreadNum(int upgradeThreadNum) {
     this.upgradeThreadNum = upgradeThreadNum;
   }
@@ -2183,6 +2193,14 @@ public class IoTDBConfig {
 
   public void setTagAttributeTotalSize(int tagAttributeTotalSize) {
     this.tagAttributeTotalSize = tagAttributeTotalSize;
+  }
+
+  public int getTagAttributeFlushInterval() {
+    return tagAttributeFlushInterval;
+  }
+
+  public void setTagAttributeFlushInterval(int tagAttributeFlushInterval) {
+    this.tagAttributeFlushInterval = tagAttributeFlushInterval;
   }
 
   public int getPrimitiveArraySize() {

@@ -34,7 +34,7 @@ public class SQLConstant {
     // forbidding instantiation
   }
 
-  private static final String[] SINGLE_ROOT_ARRAY = {"root"};
+  private static final String[] SINGLE_ROOT_ARRAY = {"root", "**"};
   private static final String[] SINGLE_TIME_ARRAY = {"time"};
   public static final PartialPath TIME_PATH = new PartialPath(SINGLE_TIME_ARRAY);
   public static final String ALIGNBY_DEVICE_COLUMN_NAME = "Device";
@@ -130,7 +130,7 @@ public class SQLConstant {
   public static final int TOK_FLUSH_TASK_INFO = 67;
   public static final int TOK_LOAD_FILES = 69;
   public static final int TOK_REMOVE_FILE = 70;
-  public static final int TOK_MOVE_FILE = 71;
+  public static final int TOK_UNLOAD_FILE = 71;
   public static final int TOK_VERSION = 72;
   public static final int TOK_TIMESERIES = 73;
   public static final int TOK_STORAGE_GROUP = 74;
@@ -183,6 +183,8 @@ public class SQLConstant {
 
   public static final int TOK_SET_SYSTEM_MODE = 110;
 
+  public static final int TOK_SETTLE = 111;
+
   public static final Map<Integer, String> tokenNames = new HashMap<>();
 
   public static String[] getSingleRootArray() {
@@ -227,7 +229,7 @@ public class SQLConstant {
 
     tokenNames.put(TOK_LOAD_FILES, "TOK_LOAD_FILES");
     tokenNames.put(TOK_REMOVE_FILE, "TOK_REMOVE_FILE");
-    tokenNames.put(TOK_MOVE_FILE, "TOK_MOVE_FILE");
+    tokenNames.put(TOK_UNLOAD_FILE, "TOK_UNLOAD_FILE");
 
     tokenNames.put(TOK_SHOW_MERGE_STATUS, "TOK_SHOW_MERGE_STATUS");
     tokenNames.put(TOK_DELETE_PARTITION, "TOK_DELETE_PARTITION");
@@ -253,6 +255,8 @@ public class SQLConstant {
     tokenNames.put(TOK_SHOW_CONTINUOUS_QUERIES, "TOK_SHOW_CONTINUOUS_QUERIES");
 
     tokenNames.put(TOK_SELECT_INTO, "TOK_SELECT_INTO");
+
+    tokenNames.put(TOK_SETTLE, "TOK_SETTLE");
   }
 
   public static boolean isReservedPath(PartialPath pathStr) {
