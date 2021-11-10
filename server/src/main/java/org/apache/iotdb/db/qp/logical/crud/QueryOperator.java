@@ -250,14 +250,6 @@ public class QueryOperator extends Operator {
       PartialPath suffixPath = getSuffixPathFromExpression(suffixExpression);
       String aggregation = aggregationFuncs != null ? aggregationFuncs.get(i) : null;
 
-      // if const measurement
-      if (suffixPath.getMeasurement().startsWith("'")) {
-        String measurementName = suffixPath.getMeasurement();
-        measurements.add(measurementName);
-        measurementInfoMap.put(measurementName, new MeasurementInfo(MeasurementType.Constant));
-        continue;
-      }
-
       // to record measurements in the loop of a suffix path
       Set<String> measurementSetOfGivenSuffix = new LinkedHashSet<>();
       for (PartialPath device : devices) {
@@ -501,7 +493,7 @@ public class QueryOperator extends Operator {
   }
 
   protected List<PartialPath> getMatchedTimeseries(PartialPath path) throws MetadataException {
-    return IoTDB.metaManager.getAllTimeseriesPath(path);
+    return IoTDB.metaManager.getFlatMeasurementPaths(path);
   }
 
   public boolean isEnableTracing() {
