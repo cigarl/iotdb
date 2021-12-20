@@ -26,7 +26,8 @@ import org.apache.iotdb.db.engine.compaction.inner.InnerCompactionStrategy;
 import org.apache.iotdb.db.engine.storagegroup.timeindex.TimeIndexLevel;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
 import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.service.TSServiceImpl;
+import org.apache.iotdb.db.service.thrift.impl.InfluxDBServiceImpl;
+import org.apache.iotdb.db.service.thrift.impl.TSServiceImpl;
 import org.apache.iotdb.rpc.RpcTransportFactory;
 import org.apache.iotdb.rpc.RpcUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -71,11 +72,6 @@ public class IoTDBConfig {
 
   public static final Pattern NODE_PATTERN = Pattern.compile(NODE_MATCHER);
 
-  /** Port which the metrics service listens to. */
-  private int metricsPort = 8181;
-
-  private boolean enableMetricService = false;
-
   /** whether to enable the mqtt service. */
   private boolean enableMQTTService = false;
 
@@ -106,6 +102,9 @@ public class IoTDBConfig {
   /** Port which the JDBC server listens to. */
   private int rpcPort = 6667;
 
+  /** Port which the influxdb protocol server listens to. */
+  private int influxDBRpcPort = 8086;
+
   /** Max concurrent client number */
   private int rpcMaxConcurrentClientNum = 65535;
 
@@ -119,7 +118,7 @@ public class IoTDBConfig {
   private long allocateMemoryForSchema = Runtime.getRuntime().maxMemory() * 1 / 10;
 
   /** Memory allocated for the read process besides cache */
-  private long allocateMemoryForReadWithoutCache = allocateMemoryForRead * 3 / 10;
+  private long allocateMemoryForReadWithoutCache = allocateMemoryForRead * 300 / 1001;
 
   private volatile int maxQueryDeduplicatedPathNum = 1000;
 
@@ -253,7 +252,7 @@ public class IoTDBConfig {
   private int concurrentFlushThread = Runtime.getRuntime().availableProcessors();
 
   /** How many threads can concurrently query. When <= 0, use CPU core number. */
-  private int concurrentQueryThread = Runtime.getRuntime().availableProcessors();
+  private int concurrentQueryThread = 8;
 
   /** How many threads can concurrently evaluate windows. When <= 0, use CPU core number. */
   private int concurrentWindowEvaluationThread = Runtime.getRuntime().availableProcessors();
@@ -378,7 +377,7 @@ public class IoTDBConfig {
   private long targetCompactionFileSize = 2147483648L;
 
   /** The max candidate file num in compaction */
-  private int maxCompactionCandidateFileNum = 10;
+  private int maxCompactionCandidateFileNum = 30;
   /**
    * When merge point number reaches this, merge the files to the last level. During a merge, if a
    * chunk with less number of chunks than this parameter, the chunk will be merged with its
@@ -403,16 +402,19 @@ public class IoTDBConfig {
    * num # This parameters have to be much smaller than the permitted max open file num of each
    * process controlled by operator system(65535 in most system).
    */
-  private int maxOpenFileNumInCrossSpaceCompaction = 2000;
+  private int maxOpenFileNumInCrossSpaceCompaction = 100;
 
   /** whether to cache meta data(ChunkMetaData and TsFileMetaData) or not. */
   private boolean metaDataCacheEnable = true;
 
+  /** Memory allocated for bloomFilter cache in read process */
+  private long allocateMemoryForBloomFilterCache = allocateMemoryForRead / 1001;
+
   /** Memory allocated for timeSeriesMetaData cache in read process */
-  private long allocateMemoryForTimeSeriesMetaDataCache = allocateMemoryForRead / 5;
+  private long allocateMemoryForTimeSeriesMetaDataCache = allocateMemoryForRead * 200 / 1001;
 
   /** Memory allocated for chunk cache in read process */
-  private long allocateMemoryForChunkCache = allocateMemoryForRead / 10;
+  private long allocateMemoryForChunkCache = allocateMemoryForRead * 100 / 1001;
 
   /** Whether to enable Last cache */
   private boolean lastCacheEnable = true;
@@ -463,14 +465,11 @@ public class IoTDBConfig {
   /** Replace implementation class of JDBC service */
   private String rpcImplClassName = TSServiceImpl.class.getName();
 
+  /** Replace implementation class of influxdb protocol service */
+  private String influxdbImplClassName = InfluxDBServiceImpl.class.getName();
+
   /** Is stat performance of sub-module enable. */
   private boolean enablePerformanceStat = false;
-
-  /** The display of stat performance interval in ms. Unit: millisecond */
-  private long performanceStatDisplayInterval = 60000;
-
-  /** The memory used for stat performance. Unit: kilobyte */
-  private int performanceStatMemoryInKB = 20;
 
   /** whether use chunkBufferPool. */
   private boolean chunkBufferPoolEnable = false;
@@ -603,6 +602,14 @@ public class IoTDBConfig {
    * statements.
    */
   private int selectIntoInsertTabletPlanRowLimit = 10000;
+
+  /**
+   * When the insert plan column count reaches the specified threshold, which means that the plan is
+   * relatively large. At this time, may be enabled multithreading. If the tablet is small, the time
+   * of each insertion is short. If we enable multithreading, we also need to consider the switching
+   * loss between threads, so we need to judge the size of the tablet.
+   */
+  private int insertMultiTabletEnableMultithreadingColumnThreshold = 10;
 
   private MergeFileStrategy mergeFileStrategy = MergeFileStrategy.MAX_SERIES_NUM;
 
@@ -756,6 +763,12 @@ public class IoTDBConfig {
    * iotdb-engine.properties
    */
   private boolean enableRpcService = true;
+
+  /**
+   * whether enable the influxdb rpc service. This parameter has no a corresponding field in the
+   * iotdb-engine.properties
+   */
+  private boolean enableInfluxDBRpcService = true;
 
   /** the size of ioTaskQueue */
   private int ioTaskQueueSizeForFlushing = 10;
@@ -968,22 +981,6 @@ public class IoTDBConfig {
     return dataDirs;
   }
 
-  public int getMetricsPort() {
-    return metricsPort;
-  }
-
-  void setMetricsPort(int metricsPort) {
-    this.metricsPort = metricsPort;
-  }
-
-  public boolean isEnableMetricService() {
-    return enableMetricService;
-  }
-
-  public void setEnableMetricService(boolean enableMetricService) {
-    this.enableMetricService = enableMetricService;
-  }
-
   void setDataDirs(String[] dataDirs) {
     this.dataDirs = dataDirs;
   }
@@ -1004,14 +1001,22 @@ public class IoTDBConfig {
     this.rpcPort = rpcPort;
   }
 
+  public int getInfluxDBRpcPort() {
+    return influxDBRpcPort;
+  }
+
+  public void setInfluxDBRpcPort(int influxDBRpcPort) {
+    this.influxDBRpcPort = influxDBRpcPort;
+  }
+
   public String getTimestampPrecision() {
     return timestampPrecision;
   }
 
   public void setTimestampPrecision(String timestampPrecision) {
-    if (!(timestampPrecision.equals("ms")
-        || timestampPrecision.equals("us")
-        || timestampPrecision.equals("ns"))) {
+    if (!("ms".equals(timestampPrecision)
+        || "us".equals(timestampPrecision)
+        || "ns".equals(timestampPrecision))) {
       logger.error(
           "Wrong timestamp precision, please set as: ms, us or ns ! Current is: "
               + timestampPrecision);
@@ -1269,7 +1274,7 @@ public class IoTDBConfig {
   }
 
   public String getIoTDBMajorVersion(String version) {
-    return version.equals("UNKNOWN")
+    return "UNKNOWN".equals(version)
         ? "UNKNOWN"
         : version.split("\\.")[0] + "." + version.split("\\.")[1];
   }
@@ -1316,6 +1321,10 @@ public class IoTDBConfig {
 
   public String getRpcImplClassName() {
     return rpcImplClassName;
+  }
+
+  public String getInfluxDBImplClassName() {
+    return influxdbImplClassName;
   }
 
   public void setRpcImplClassName(String rpcImplClassName) {
@@ -1482,22 +1491,6 @@ public class IoTDBConfig {
     this.enablePerformanceStat = enablePerformanceStat;
   }
 
-  public long getPerformanceStatDisplayInterval() {
-    return performanceStatDisplayInterval;
-  }
-
-  void setPerformanceStatDisplayInterval(long performanceStatDisplayInterval) {
-    this.performanceStatDisplayInterval = performanceStatDisplayInterval;
-  }
-
-  public int getPerformanceStatMemoryInKB() {
-    return performanceStatMemoryInKB;
-  }
-
-  void setPerformanceStatMemoryInKB(int performanceStatMemoryInKB) {
-    this.performanceStatMemoryInKB = performanceStatMemoryInKB;
-  }
-
   public boolean isEnablePartialInsert() {
     return enablePartialInsert;
   }
@@ -1546,12 +1539,22 @@ public class IoTDBConfig {
     this.continuousQueryMinimumEveryInterval = minimumEveryInterval;
   }
 
+  public void setSelectIntoInsertTabletPlanRowLimit(int selectIntoInsertTabletPlanRowLimit) {
+    this.selectIntoInsertTabletPlanRowLimit = selectIntoInsertTabletPlanRowLimit;
+  }
+
   public int getSelectIntoInsertTabletPlanRowLimit() {
     return selectIntoInsertTabletPlanRowLimit;
   }
 
-  public void setSelectIntoInsertTabletPlanRowLimit(int selectIntoInsertTabletPlanRowLimit) {
-    this.selectIntoInsertTabletPlanRowLimit = selectIntoInsertTabletPlanRowLimit;
+  public int getInsertMultiTabletEnableMultithreadingColumnThreshold() {
+    return insertMultiTabletEnableMultithreadingColumnThreshold;
+  }
+
+  public void setInsertMultiTabletEnableMultithreadingColumnThreshold(
+      int insertMultiTabletEnableMultithreadingColumnThreshold) {
+    this.insertMultiTabletEnableMultithreadingColumnThreshold =
+        insertMultiTabletEnableMultithreadingColumnThreshold;
   }
 
   public int getMergeWriteThroughputMbPerSec() {
@@ -1720,6 +1723,14 @@ public class IoTDBConfig {
 
   public void setMetaDataCacheEnable(boolean metaDataCacheEnable) {
     this.metaDataCacheEnable = metaDataCacheEnable;
+  }
+
+  public long getAllocateMemoryForBloomFilterCache() {
+    return allocateMemoryForBloomFilterCache;
+  }
+
+  public void setAllocateMemoryForBloomFilterCache(long allocateMemoryForBloomFilterCache) {
+    this.allocateMemoryForBloomFilterCache = allocateMemoryForBloomFilterCache;
   }
 
   public long getAllocateMemoryForTimeSeriesMetaDataCache() {
@@ -2321,6 +2332,14 @@ public class IoTDBConfig {
 
   public void setEnableRpcService(boolean enableRpcService) {
     this.enableRpcService = enableRpcService;
+  }
+
+  public boolean isEnableInfluxDBRpcService() {
+    return enableInfluxDBRpcService;
+  }
+
+  public void setEnableInfluxDBRpcService(boolean enableInfluxDBRpcService) {
+    this.enableInfluxDBRpcService = enableInfluxDBRpcService;
   }
 
   public int getIoTaskQueueSizeForFlushing() {

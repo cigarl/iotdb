@@ -22,7 +22,8 @@ import org.apache.iotdb.db.concurrent.IoTDBDefaultThreadExceptionHandler;
 import org.apache.iotdb.db.conf.IoTDBConfigCheck;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.cost.statistic.Measurement;
+import org.apache.iotdb.db.conf.rest.IoTDBRestServiceCheck;
+import org.apache.iotdb.db.conf.rest.IoTDBRestServiceDescriptor;
 import org.apache.iotdb.db.cq.ContinuousQueryService;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.CacheHitRatioMonitor;
@@ -34,12 +35,13 @@ import org.apache.iotdb.db.exception.ConfigurationException;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.monitor.StatMonitor;
+import org.apache.iotdb.db.protocol.rest.RestService;
 import org.apache.iotdb.db.query.udf.service.TemporaryQueryDataFileService;
 import org.apache.iotdb.db.query.udf.service.UDFClassLoaderManager;
 import org.apache.iotdb.db.query.udf.service.UDFRegistrationService;
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
 import org.apache.iotdb.db.rescon.SystemInfo;
-import org.apache.iotdb.db.rescon.TVListAllocator;
+import org.apache.iotdb.db.service.metrics.MetricsService;
 import org.apache.iotdb.db.sync.receiver.SyncServerManager;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 
@@ -64,6 +66,7 @@ public class IoTDB implements IoTDBMBean {
   public static void main(String[] args) {
     try {
       IoTDBConfigCheck.getInstance().checkConfig();
+      IoTDBRestServiceCheck.getInstance().checkConfig();
     } catch (ConfigurationException | IOException e) {
       logger.error("meet error when doing start checking", e);
       System.exit(1);
@@ -115,8 +118,6 @@ public class IoTDB implements IoTDBMBean {
     registerManager.register(JMXService.getInstance());
     registerManager.register(FlushManager.getInstance());
     registerManager.register(MultiFileLogNodeManager.getInstance());
-    registerManager.register(Measurement.INSTANCE);
-    registerManager.register(TVListAllocator.getInstance());
     registerManager.register(CacheHitRatioMonitor.getInstance());
     registerManager.register(MergeManager.getINSTANCE());
     registerManager.register(CompactionTaskManager.getInstance());
@@ -127,19 +128,23 @@ public class IoTDB implements IoTDBMBean {
     registerManager.register(UDFRegistrationService.getInstance());
     registerManager.register(TriggerRegistrationService.getInstance());
     registerManager.register(ContinuousQueryService.getInstance());
+    registerManager.register(MetricsService.getInstance());
 
     // in cluster mode, RPC service is not enabled.
     if (IoTDBDescriptor.getInstance().getConfig().isEnableRpcService()) {
       registerManager.register(RPCService.getInstance());
     }
 
-    if (IoTDBDescriptor.getInstance().getConfig().isEnableMetricService()) {
-      registerManager.register(MetricsService.getInstance());
+    if (IoTDBDescriptor.getInstance().getConfig().isEnableInfluxDBRpcService()) {
+      registerManager.register(InfluxDBRPCService.getInstance());
     }
+
     if (IoTDBDescriptor.getInstance().getConfig().isEnableMQTTService()) {
       registerManager.register(MQTTService.getInstance());
     }
-
+    if (IoTDBRestServiceDescriptor.getInstance().getConfig().isEnableRestService()) {
+      registerManager.register(RestService.getInstance());
+    }
     logger.info("IoTDB is set up, now may some sgs are not ready, please wait several seconds...");
 
     while (!StorageEngine.getInstance().isAllSgReady()) {

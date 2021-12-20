@@ -20,7 +20,7 @@
 package org.apache.iotdb.db.query.expression;
 
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
-import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.utils.WildcardsRemover;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
@@ -151,5 +151,22 @@ public class ResultColumn {
 
   public TSDataType getDataType() {
     return dataType;
+  }
+
+  @Override
+  public final int hashCode() {
+    return alias == null ? getResultColumnName().hashCode() : alias.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof ResultColumn)) {
+      return false;
+    }
+    return getResultColumnName().equals(((ResultColumn) o).getResultColumnName());
   }
 }

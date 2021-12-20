@@ -23,7 +23,7 @@ import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
-import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -68,11 +68,7 @@ public class RawDataQueryExecutor {
 
     try {
       return new RawQueryDataSetWithoutValueFilter(
-          context.getQueryId(),
-          queryPlan.getDeduplicatedPaths(),
-          queryPlan.getDeduplicatedDataTypes(),
-          readersOfSelectedSeries,
-          queryPlan.isAscending());
+          context.getQueryId(), queryPlan, readersOfSelectedSeries);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new StorageEngineException(e.getMessage());
@@ -106,9 +102,9 @@ public class RawDataQueryExecutor {
     List<StorageGroupProcessor> list =
         StorageEngine.getInstance().mergeLock(queryPlan.getDeduplicatedPaths());
     try {
-      for (int i = 0; i < queryPlan.getDeduplicatedPaths().size(); i++) {
-        PartialPath path = queryPlan.getDeduplicatedPaths().get(i);
-        TSDataType dataType = queryPlan.getDeduplicatedDataTypes().get(i);
+      List<PartialPath> paths = queryPlan.getDeduplicatedPaths();
+      for (PartialPath path : paths) {
+        TSDataType dataType = path.getSeriesType();
 
         QueryDataSource queryDataSource =
             QueryResourceManager.getInstance().getQueryDataSource(path, context, timeFilter);
