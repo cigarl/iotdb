@@ -18,10 +18,10 @@
  */
 package org.apache.iotdb.db.qp.utils;
 
+import org.apache.iotdb.commons.utils.TestOnly;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.query.LogicalOperatorException;
 import org.apache.iotdb.db.query.control.SessionManager;
-import org.apache.iotdb.db.utils.TestOnly;
 
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -678,5 +678,46 @@ public class DatetimeUtils {
     ms,
     us,
     ns
+  }
+
+  public static TimeUnit toTimeUnit(String t) {
+    switch (t) {
+      case "h":
+        return TimeUnit.HOURS;
+      case "m":
+        return TimeUnit.MINUTES;
+      case "s":
+        return TimeUnit.SECONDS;
+      case "ms":
+        return TimeUnit.MILLISECONDS;
+      case "u":
+        return TimeUnit.MICROSECONDS;
+      case "n":
+        return TimeUnit.NANOSECONDS;
+      default:
+        throw new IllegalArgumentException("time precision must be one of: h,m,s,ms,u,n");
+    }
+  }
+
+  public static final long MS_TO_MONTH = 30 * 86400_000L;
+
+  /**
+   * add natural months based on the startTime to avoid edge cases, ie 2/28
+   *
+   * @param startTime current start time
+   * @param numMonths numMonths is updated in hasNextWithoutConstraint()
+   * @return nextStartTime
+   */
+  public static long calcIntervalByMonth(long startTime, long numMonths) {
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTimeZone(SessionManager.getInstance().getCurrSessionTimeZone());
+    calendar.setTimeInMillis(startTime);
+    boolean isLastDayOfMonth =
+        calendar.get(Calendar.DAY_OF_MONTH) == calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
+    calendar.add(Calendar.MONTH, (int) (numMonths));
+    if (isLastDayOfMonth) {
+      calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+    }
+    return calendar.getTimeInMillis();
   }
 }

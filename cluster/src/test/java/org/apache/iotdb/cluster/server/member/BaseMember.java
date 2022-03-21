@@ -37,7 +37,7 @@ import org.apache.iotdb.cluster.log.applier.DataLogApplier;
 import org.apache.iotdb.cluster.log.manage.PartitionedSnapshotLogManager;
 import org.apache.iotdb.cluster.log.manage.RaftLogManager;
 import org.apache.iotdb.cluster.log.snapshot.FileSnapshot;
-import org.apache.iotdb.cluster.metadata.CMManager;
+import org.apache.iotdb.cluster.metadata.CSchemaEngine;
 import org.apache.iotdb.cluster.metadata.MetaPuller;
 import org.apache.iotdb.cluster.partition.PartitionGroup;
 import org.apache.iotdb.cluster.partition.PartitionTable;
@@ -50,15 +50,16 @@ import org.apache.iotdb.cluster.rpc.thrift.RaftService.AsyncClient;
 import org.apache.iotdb.cluster.rpc.thrift.TNodeStatus;
 import org.apache.iotdb.cluster.server.NodeCharacter;
 import org.apache.iotdb.cluster.server.Response;
+import org.apache.iotdb.commons.service.RegisterManager;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.executor.PlanExecutor;
 import org.apache.iotdb.db.service.IoTDB;
-import org.apache.iotdb.db.service.RegisterManager;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.SchemaUtils;
+import org.apache.iotdb.metrics.config.MetricConfigDescriptor;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.After;
@@ -111,6 +112,7 @@ public class BaseMember {
     prevLeaderWait = RaftMember.getWaitLeaderTimeMs();
     prevEnableWAL = IoTDBDescriptor.getInstance().getConfig().isEnableWal();
     IoTDBDescriptor.getInstance().getConfig().setEnableWal(false);
+    MetricConfigDescriptor.getInstance().getMetricConfig().setEnableMetric(false);
     RaftMember.setWaitLeaderTimeMs(10);
 
     syncLeaderMaxWait = ClusterConstant.getSyncLeaderMaxWaitMs();
@@ -145,9 +147,9 @@ public class BaseMember {
       getDataGroupMember(node);
     }
 
-    IoTDB.setMetaManager(CMManager.getInstance());
-    CMManager.getInstance().setMetaGroupMember(testMetaMember);
-    CMManager.getInstance().setCoordinator(coordinator);
+    IoTDB.setSchemaEngine(CSchemaEngine.getInstance());
+    CSchemaEngine.getInstance().setMetaGroupMember(testMetaMember);
+    CSchemaEngine.getInstance().setCoordinator(coordinator);
 
     EnvironmentUtils.envSetUp();
     prevUrls = ClusterDescriptor.getInstance().getConfig().getSeedNodeUrls();
@@ -160,7 +162,7 @@ public class BaseMember {
 
     for (int i = 0; i < 10; i++) {
       try {
-        IoTDB.metaManager.setStorageGroup(new PartialPath(TestUtils.getTestSg(i)));
+        IoTDB.schemaEngine.setStorageGroup(new PartialPath(TestUtils.getTestSg(i)));
         for (int j = 0; j < 20; j++) {
           SchemaUtils.registerTimeseries(TestUtils.getTestTimeSeriesSchema(i, j));
         }

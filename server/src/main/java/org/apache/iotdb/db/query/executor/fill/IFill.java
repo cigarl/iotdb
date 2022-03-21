@@ -24,13 +24,14 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.SessionManager;
-import org.apache.iotdb.db.query.dataset.groupby.GroupByEngineDataSet;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Set;
+
+import static org.apache.iotdb.db.qp.utils.DatetimeUtils.MS_TO_MONTH;
 
 public abstract class IFill {
 
@@ -87,8 +88,7 @@ public abstract class IFill {
 
   public boolean insideBeforeRange(long previous, long startTime) {
     if (isBeforeByMonth) {
-      return previous
-          >= slideMonth(startTime, (int) (-beforeRange / GroupByEngineDataSet.MS_TO_MONTH));
+      return previous >= slideMonth(startTime, (int) (-beforeRange / MS_TO_MONTH));
     } else {
       return previous >= startTime - beforeRange;
     }
@@ -96,24 +96,31 @@ public abstract class IFill {
 
   public boolean insideAfterRange(long next, long startTime) {
     if (isAfterByMonth) {
-      return next <= slideMonth(startTime, (int) (afterRange / GroupByEngineDataSet.MS_TO_MONTH));
+      return next <= slideMonth(startTime, (int) (afterRange / MS_TO_MONTH));
     } else {
       return next <= startTime + afterRange;
     }
   }
 
   public void convertRange(long startTime, long endTime) {
-    if (isBeforeByMonth) {
-      queryStartTime =
-          slideMonth(startTime, (int) (-beforeRange / GroupByEngineDataSet.MS_TO_MONTH));
+    if (beforeRange > 0) {
+      if (isBeforeByMonth) {
+        queryStartTime = slideMonth(startTime, (int) (-beforeRange / MS_TO_MONTH));
+      } else {
+        queryStartTime = startTime - beforeRange;
+      }
     } else {
-      queryStartTime = startTime - beforeRange;
+      queryStartTime = startTime;
     }
 
-    if (isAfterByMonth) {
-      queryEndTime = slideMonth(endTime, (int) (afterRange / GroupByEngineDataSet.MS_TO_MONTH));
+    if (afterRange > 0) {
+      if (isAfterByMonth) {
+        queryEndTime = slideMonth(endTime, (int) (afterRange / MS_TO_MONTH));
+      } else {
+        queryEndTime = endTime + afterRange;
+      }
     } else {
-      queryEndTime = endTime + afterRange;
+      queryEndTime = endTime;
     }
   }
 
